@@ -1,28 +1,28 @@
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
 import os
 import re
+from telegram import Update
+from telegram.ext import Application, MessageHandler, ContextTypes, filters
 
-TOKEN = os.environ["BOT_TOKEN"]
+TOKEN = os.getenv("BOT_TOKEN")
 
 async def anti_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
+    if not update.message:
         return
 
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
-
-    admins = await context.bot.get_chat_administrators(chat_id)
-    admin_ids = [admin.user.id for admin in admins]
-
-    # Admin/Owner ko allow karo
-    if user_id in admin_ids:
+    text = update.message.text
+    if not text:
         return
 
-    text = update.message.text.lower()
+    admins = await context.bot.get_chat_administrators(
+        update.effective_chat.id
+    )
 
-    # Link detect karo
-    if re.search(r"(https?://|www\.|t\.me/)", text):
+    admin_ids = [a.user.id for a in admins]
+
+    if update.effective_user.id in admin_ids:
+        return
+
+    if re.search(r"(https?://|www\.|t\.me/)", text.lower()):
         try:
             await update.message.delete()
         except Exception as e:
@@ -31,7 +31,11 @@ async def anti_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 app = Application.builder().token(TOKEN).build()
 
 app.add_handler(
-    MessageHandler(filters.TEXT & ~filters.COMMAND, anti_link)
+    MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        anti_link
+    )
 )
 
+print("ParthTraderAlerts_Bot started...")
 app.run_polling()
